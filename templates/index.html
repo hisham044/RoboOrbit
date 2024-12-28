@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Control</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="video-container" id="video-container">
+        <img id="video-feed" src="{{ url_for('video_feed') }}" alt="Video Feed">
+        <button id="fullscreen-btn" class="fullscreen-btn" onclick="toggleFullscreen()">🔳</button>
+    </div>
+    <div class="overlay" id="overlay">
+        <div class="controls">
+            <button class="btn stop-btn" data-direction="stop"><i class="fas fa-stop"></i></button>
+            <button class="btn up-btn" data-direction="up"><i class="fas fa-arrow-up"></i></button>
+            <button class="btn left-btn" data-direction="left"><i class="fas fa-arrow-left"></i></button>
+            <button class="btn right-btn" data-direction="right"><i class="fas fa-arrow-right"></i></button>
+            <button class="btn down-btn" data-direction="down"><i class="fas fa-arrow-down"></i></button>
+            <button class="btn camera-up-btn" data-direction="camera_up"><i class="fas fa-video"></i><i class="fas fa-arrow-up"></i></button>
+            <button class="btn camera-down-btn" data-direction="camera_down"><i class="fas fa-video"></i><i class="fas fa-arrow-down"></i></button>
+        </div>             
+    </div>
+
+    <script>
+        let intervalId;
+    
+        // Function to start sending commands continuously
+        function startSendingCommand(direction) {
+            sendCommand(direction);
+            intervalId = setInterval(() => sendCommand(direction), 100); // Adjust the interval as needed
+        }
+    
+        // Function to stop sending commands
+        function stopSendingCommand() {
+            clearInterval(intervalId);
+        }
+    
+        // Function to send a command to the server
+        function sendCommand(direction) {
+            $.get(`/move/${direction}`, function () {
+                console.log(`Command sent: ${direction}`);
+            });
+        }
+    
+        // Attach event listeners to buttons for continuous commands
+        document.addEventListener('DOMContentLoaded', () => {
+            const buttons = document.querySelectorAll('.btn');
+    
+            buttons.forEach(button => {
+                const direction = button.getAttribute('data-direction');
+    
+                // Combined mousedown and touchstart for starting the command
+                const startHandler = (event) => {
+                    event.preventDefault(); // Prevent default browser actions
+                    startSendingCommand(direction);
+                };
+    
+                // Combined mouseup, mouseleave, and touchend for stopping the command
+                const stopHandler = () => {
+                    stopSendingCommand();
+                };
+    
+                button.addEventListener('mousedown', startHandler);
+                button.addEventListener('touchstart', startHandler);
+    
+                button.addEventListener('mouseup', stopHandler);
+                button.addEventListener('mouseleave', stopHandler);
+                button.addEventListener('touchend', stopHandler);
+            });
+        });
+    
+        // Fullscreen toggle function
+        function toggleFullscreen() {
+            const videoContainer = document.getElementById('video-container');
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+    
+            if (!document.fullscreenElement) {
+                videoContainer.requestFullscreen();
+                fullscreenBtn.textContent = "🔲"; // Icon for exiting fullscreen
+            } else {
+                document.exitFullscreen();
+                fullscreenBtn.textContent = "🔳"; // Icon for entering fullscreen
+            }
+        }
+    
+        // Ensure controls and button visibility persist in fullscreen mode
+        document.addEventListener('fullscreenchange', () => {
+            const overlay = document.getElementById('overlay');
+            overlay.style.display = document.fullscreenElement ? 'flex' : 'flex';
+        });
+    </script>
+    
+    
+</body>
+</html>

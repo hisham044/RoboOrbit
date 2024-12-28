@@ -1,0 +1,169 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    height: 100%;
+    width: 100%;
+}
+
+.video-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: black;
+}
+
+#video-feed {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.fullscreen-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 1001; /* Ensure it's above video */
+    font-size: 18px;
+}
+
+.fullscreen-btn:hover {
+    background-color: rgba(0, 0, 0, 0.9);
+}
+
+.overlay {
+    position: fixed; /* Fixed position ensures visibility in fullscreen */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    z-index: 1000;
+    pointer-events: none; /* Allow interaction through */
+}
+
+.controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    width: 200px;
+    height: 200px;
+    z-index: 9999;
+    pointer-events: auto; /* Enable button interaction */
+}
+
+.btn {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    border-radius: 50%;
+    border: none;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    position: absolute;
+}
+
+.btn:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.stop-btn {
+    background-color: rgba(255, 0, 0, 0.8);
+    width: 80px;
+    height: 80px;
+    font-size: 30px;
+}
+
+.up-btn {
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.left-btn {
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+}
+
+.right-btn {
+    top: 50%;
+    right: 0;
+    transform: translateY(-50%);
+}
+
+.down-btn {
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.camera-up-btn {
+    left: -100px; /* Adjust to position the button outside the main control circle */
+    top: 30%;
+    transform: translateY(-50%);
+}
+
+.camera-down-btn {
+    left: -100px; /* Same horizontal offset as the camera-up-btn */
+    top: 70%;
+    transform: translateY(-50%);
+}
+
+.camera-up-btn,
+.camera-down-btn {
+    background-color: rgba(0, 0, 0, 0.6);
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    border-radius: 50%;
+    color: white;
+    border: none;
+    position: absolute;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.camera-up-btn:hover,
+.camera-down-btn:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.btn i {
+    font-size: 24px;
+    pointer-events: none; /* Prevent touch interaction with icons */
+}
+
+
+@media (max-width: 600px) {
+    .controls {
+        width: 150px;
+        height: 150px;
+    }
+
+    .btn {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+}
