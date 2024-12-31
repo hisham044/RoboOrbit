@@ -86,7 +86,19 @@ body, html {
 
 .btn,
 .camera-up-btn,
-.camera-down-btn,
+.camera-down-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    font-size: 24px;
+}
+
 .delivery-btn,
 .speed-btn {
     width: 60px;
