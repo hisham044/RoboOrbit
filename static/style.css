@@ -1,4 +1,4 @@
-/* style.css */
+/* Global Resets */
 * {
     margin: 0;
     padding: 0;
@@ -10,6 +10,7 @@ body, html {
     width: 100%;
 }
 
+/* Video Container */
 .video-container {
     position: relative;
     width: 100%;
@@ -26,52 +27,8 @@ body, html {
     left: 0;
 }
 
-.fullscreen-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    padding: 10px;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    z-index: 1001; /* Ensure it's above video */
-    font-size: 18px;
-}
-
-.fullscreen-btn:hover {
-    background-color: rgba(0, 0, 0, 0.9);
-}
-
-.overlay {
-    position: fixed; /* Fixed position ensures visibility in fullscreen */
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    z-index: 1000;
-    pointer-events: none; /* Allow interaction through */
-}
-
-.controls {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap;
-    width: 200px;
-    height: 200px;
-    z-index: 9999;
-    pointer-events: auto; /* Enable button interaction */
-}
-
-.btn {
+/* Button Base Styles */
+button, .btn {
     width: 60px;
     height: 60px;
     font-size: 24px;
@@ -80,12 +37,22 @@ body, html {
     background-color: rgba(0, 0, 0, 0.6);
     color: white;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: background-color 0.3s, transform 0.3s ease;
     position: absolute;
 }
 
-.btn:hover {
+button:hover, .btn:hover {
     background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* Specific Buttons */
+.fullscreen-btn {
+    top: 10px;
+    right: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 18px;
+    z-index: 1001;
 }
 
 .stop-btn {
@@ -95,6 +62,22 @@ body, html {
     font-size: 30px;
 }
 
+.delivery-btn, .speed-btn {
+    transition: all 0.3s ease;
+}
+
+.delivery-btn:hover, .speed-btn:hover {
+    transform: scale(1.1);
+}
+
+.speed-indicator {
+    position: absolute;
+    font-size: 12px;
+    top: 15px;
+    right: 15px;
+}
+
+/* Button Positions */
 .up-btn {
     top: 0;
     left: 50%;
@@ -119,44 +102,66 @@ body, html {
     transform: translateX(-50%);
 }
 
-.camera-up-btn {
-    left: -100px; /* Adjust to position the button outside the main control circle */
-    top: 30%;
-    transform: translateY(-50%);
-}
-
-.camera-down-btn {
-    left: -100px; /* Same horizontal offset as the camera-up-btn */
-    top: 70%;
-    transform: translateY(-50%);
-}
-
-.camera-up-btn,
-.camera-down-btn {
-    background-color: rgba(0, 0, 0, 0.6);
+.camera-up-btn, .camera-down-btn {
+    left: -100px;
     width: 60px;
     height: 60px;
-    font-size: 24px;
-    border-radius: 50%;
-    color: white;
-    border: none;
-    position: absolute;
-    cursor: pointer;
-    transition: background-color 0.3s;
 }
 
-.camera-up-btn:hover,
-.camera-down-btn:hover {
-    background-color: rgba(0, 0, 0, 0.8);
+.camera-up-btn {
+    top: 30%;
 }
 
-.btn i {
-    font-size: 24px;
-    pointer-events: none; /* Prevent touch interaction with icons */
+.camera-down-btn {
+    top: 70%;
 }
 
+/* Overlay and Controls */
+.overlay, .controls {
+    position: fixed;
+    display: flex;
+    z-index: 1000;
+    pointer-events: none;
+}
 
-@media (max-width: 600px) {
+.overlay {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.controls {
+    bottom: 20px;
+    right: 20px;
+    flex-wrap: wrap;
+    width: 200px;
+    height: 200px;
+    pointer-events: auto;
+}
+
+/* Left and Right Controls */
+.left-controls {
+    flex-direction: column;
+    gap: 20px;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: auto;
+}
+
+.right-controls {
+    bottom: 20px;
+    right: 20px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
     .controls {
         width: 150px;
         height: 150px;
@@ -167,80 +172,7 @@ body, html {
         height: 50px;
         font-size: 20px;
     }
-}
 
-/* style.css */
-/* Keep existing styles and add/modify the following */
-
-.overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    z-index: 1000;
-    pointer-events: none;
-    padding: 20px;
-}
-
-/* Left controls styling */
-.left-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    pointer-events: auto;
-    position: fixed;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-/* Right controls styling - modify existing .controls class */
-.right-controls {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-wrap: wrap;
-    width: 200px;
-    height: 200px;
-    pointer-events: auto;
-}
-
-/* New button styles */
-.delivery-btn,
-.speed-btn {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: rgba(0, 0, 0, 0.6);
-    color: white;
-    border: none;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-}
-
-.delivery-btn:hover,
-.speed-btn:hover {
-    background-color: rgba(0, 0, 0, 0.8);
-    transform: scale(1.1);
-}
-
-.speed-indicator {
-    position: absolute;
-    font-size: 12px;
-    top: 15px;
-    right: 15px;
-}
-
-/* Responsive design for smaller screens */
-@media (max-width: 768px) {
     .overlay {
         flex-direction: column;
         justify-content: space-between;
@@ -259,23 +191,9 @@ body, html {
         right: 50%;
         transform: translateX(50%);
     }
-
-    .delivery-btn,
-    .speed-btn {
-        width: 50px;
-        height: 50px;
-    }
 }
 
-/* Ensure controls visibility in fullscreen */
-:-webkit-full-screen .overlay {
-    display: flex !important;
-}
-
-:-moz-full-screen .overlay {
-    display: flex !important;
-}
-
+/* Fullscreen */
 :fullscreen .overlay {
     display: flex !important;
 }
