@@ -169,43 +169,113 @@ body, html {
     }
 }
 
-.new-controls {
+/* style.css */
+/* Keep existing styles and add/modify the following */
+
+.overlay {
     position: fixed;
-    top: 20px;
-    left: 20px;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    pointer-events: none;
+    padding: 20px;
+}
+
+/* Left controls styling */
+.left-controls {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    z-index: 9999;
-    pointer-events: auto; /* Enable interaction */
+    gap: 20px;
+    pointer-events: auto;
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
-.new-controls .btn {
+/* Right controls styling - modify existing .controls class */
+.right-controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    width: 200px;
+    height: 200px;
+    pointer-events: auto;
+}
+
+/* New button styles */
+.delivery-btn,
+.speed-btn {
     width: 60px;
     height: 60px;
-    font-size: 24px;
     border-radius: 50%;
-    border: none;
     background-color: rgba(0, 0, 0, 0.6);
     color: white;
+    border: none;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.3s ease;
+    position: relative;
 }
 
-.new-controls .btn:hover {
+.delivery-btn:hover,
+.speed-btn:hover {
     background-color: rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
 }
 
-/* Ensure both sections are responsive */
-.controls, .new-controls {
-    flex-wrap: wrap;
+.speed-indicator {
+    position: absolute;
+    font-size: 12px;
+    top: 15px;
+    right: 15px;
 }
 
+/* Responsive design for smaller screens */
 @media (max-width: 768px) {
-    .new-controls {
-        flex-direction: row;
-        top: auto;
-        bottom: 20px;
-        left: 20px;
+    .overlay {
+        flex-direction: column;
+        justify-content: space-between;
     }
+
+    .left-controls {
+        flex-direction: row;
+        left: 50%;
+        top: 20px;
+        transform: translateX(-50%);
+        gap: 15px;
+    }
+
+    .right-controls {
+        bottom: 20px;
+        right: 50%;
+        transform: translateX(50%);
+    }
+
+    .delivery-btn,
+    .speed-btn {
+        width: 50px;
+        height: 50px;
+    }
+}
+
+/* Ensure controls visibility in fullscreen */
+:-webkit-full-screen .overlay {
+    display: flex !important;
+}
+
+:-moz-full-screen .overlay {
+    display: flex !important;
+}
+
+:fullscreen .overlay {
+    display: flex !important;
 }
