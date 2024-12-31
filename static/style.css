@@ -169,37 +169,43 @@ body, html {
     }
 }
 
-.sidebar {
+.new-controls {
     position: fixed;
-    top: 50%;
-    right: 10px;
-    transform: translateY(-50%);
+    top: 20px;
+    left: 20px;
     display: flex;
     flex-direction: column;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 10px;
-    border-radius: 8px;
-    z-index: 1000;
-    pointer-events: auto;
+    gap: 15px;
+    z-index: 9999;
+    pointer-events: auto; /* Enable interaction */
 }
 
-.sidebar-btn {
-    margin: 5px 0;
-    padding: 10px;
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
+.new-controls .btn {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    border-radius: 50%;
     border: none;
-    border-radius: 5px;
-    font-size: 14px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
     cursor: pointer;
     transition: background-color 0.3s;
-    width: 100px;
 }
 
-.sidebar-btn:hover {
-    background-color: rgba(0, 0, 0, 1);
+.new-controls .btn:hover {
+    background-color: rgba(0, 0, 0, 0.8);
 }
 
-.sidebar-btn:active {
-    background-color: rgba(255, 255, 255, 0.3);
+/* Ensure both sections are responsive */
+.controls, .new-controls {
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .new-controls {
+        flex-direction: row;
+        top: auto;
+        bottom: 20px;
+        left: 20px;
+    }
 }

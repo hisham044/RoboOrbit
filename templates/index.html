@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,12 +9,21 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 </head>
-<body>
+<body>    
     <div class="video-container" id="video-container">
         <img id="video-feed" src="{{ url_for('video_feed') }}" alt="Video Feed">
-        <button id="fullscreen-btn" class="fullscreen-btn" onclick="toggleFullscreen()">🔳</button>
+        <button id="fullscreen-btn" class="fullscreen-btn" onclick="toggleFullscreen()"><i class="fas fa-expand"></i></button>
     </div>
     <div class="overlay" id="overlay">
+        <!-- New Buttons Section -->
+        <div class="new-controls">
+            <button class="btn open-delivery-btn" data-direction="open_delivery"><i class="fas fa-box-open"></i></button>
+            <button class="btn close-delivery-btn" data-direction="close_delivery"><i class="fas fa-box"></i></button>
+            <button class="btn increase-speed-btn" data-direction="increase_speed"><i class="fas fa-plus"></i></button>
+            <button class="btn decrease-speed-btn" data-direction="decrease_speed"><i class="fas fa-minus"></i></button>
+        </div>
+
+        <!-- Existing Controls Section -->
         <div class="controls">
             <button class="btn stop-btn" data-direction="stop"><i class="fas fa-stop"></i></button>
             <button class="btn up-btn" data-direction="move_forward"><i class="fas fa-arrow-up"></i></button>
@@ -23,66 +33,77 @@
             <button class="btn camera-up-btn" data-direction="camera_up"><i class="fas fa-video"></i><i class="fas fa-arrow-up"></i></button>
             <button class="btn camera-down-btn" data-direction="camera_down"><i class="fas fa-video"></i><i class="fas fa-arrow-down"></i></button>
         </div>
-        <div class="sidebar">
-            <button class="sidebar-btn" data-direction="open_delivery">Open Delivery</button>
-            <button class="sidebar-btn" data-direction="close_delivery">Close Delivery</button>
-            <button class="sidebar-btn" data-direction="increase_speed">Increase Speed</button>
-            <button class="sidebar-btn" data-direction="decrease_speed">Decrease Speed</button>
-        </div>
     </div>
 
     <script>
         let intervalId;
-
+    
+        // Function to start sending commands continuously
         function startSendingCommand(direction) {
             sendCommand(direction);
-            intervalId = setInterval(() => sendCommand(direction), 100);
+            intervalId = setInterval(() => sendCommand(direction), 100); // Adjust the interval as needed
         }
-
+    
+        // Function to stop sending commands
         function stopSendingCommand() {
             clearInterval(intervalId);
         }
-
+    
+        // Function to send a command to the server
         function sendCommand(direction) {
             $.get(`/move/${direction}`, function () {
                 console.log(`Command sent: ${direction}`);
             });
         }
-
+    
+        // Attach event listeners to buttons for continuous commands
         document.addEventListener('DOMContentLoaded', () => {
-            const buttons = document.querySelectorAll('.btn, .sidebar-btn');
-
+            const buttons = document.querySelectorAll('.btn');
+    
             buttons.forEach(button => {
                 const direction = button.getAttribute('data-direction');
+    
+                // Combined mousedown and touchstart for starting the command
                 const startHandler = (event) => {
-                    event.preventDefault();
+                    event.preventDefault(); // Prevent default browser actions
                     startSendingCommand(direction);
                 };
+    
+                // Combined mouseup, mouseleave, and touchend for stopping the command
                 const stopHandler = () => {
                     stopSendingCommand();
                 };
-
+    
                 button.addEventListener('mousedown', startHandler);
                 button.addEventListener('touchstart', startHandler);
-
+    
                 button.addEventListener('mouseup', stopHandler);
                 button.addEventListener('mouseleave', stopHandler);
                 button.addEventListener('touchend', stopHandler);
             });
         });
-
+    
+        // Fullscreen toggle function
         function toggleFullscreen() {
             const videoContainer = document.getElementById('video-container');
             const fullscreenBtn = document.getElementById('fullscreen-btn');
-
+    
             if (!document.fullscreenElement) {
                 videoContainer.requestFullscreen();
-                fullscreenBtn.textContent = "🔲";
+                fullscreenBtn.textContent = "🔲"; // Icon for exiting fullscreen
             } else {
                 document.exitFullscreen();
-                fullscreenBtn.textContent = "🔳";
+                fullscreenBtn.textContent = "🔳"; // Icon for entering fullscreen
             }
         }
+    
+        // Ensure controls and button visibility persist in fullscreen mode
+        document.addEventListener('fullscreenchange', () => {
+            const overlay = document.getElementById('overlay');
+            overlay.style.display = document.fullscreenElement ? 'flex' : 'flex';
+        });
     </script>
+    
+    
 </body>
 </html>
