@@ -169,41 +169,37 @@ body, html {
     }
 }
 
-.special-controls {
+.sidebar {
     position: fixed;
-    bottom: 100px;
-    right: 20px;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    z-index: 9999;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px;
+    border-radius: 8px;
+    z-index: 1000;
     pointer-events: auto;
 }
 
-.special-btn {
-    width: 150px;
-    height: 50px;
-    font-size: 16px;
-    border: none;
-    border-radius: 8px;
-    background-color: rgba(0, 123, 255, 0.8);
+.sidebar-btn {
+    margin: 5px 0;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.8);
     color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
     cursor: pointer;
     transition: background-color 0.3s;
+    width: 100px;
 }
 
-.special-btn:hover {
-    background-color: rgba(0, 123, 255, 1);
+.sidebar-btn:hover {
+    background-color: rgba(0, 0, 0, 1);
 }
 
-@media (max-width: 600px) {
-    .special-btn {
-        width: 120px;
-        height: 40px;
-        font-size: 14px;
-    }
-    .controls {
-        width: 120px;
-        height: 120px;
-    }
+.sidebar-btn:active {
+    background-color: rgba(255, 255, 255, 0.3);
 }

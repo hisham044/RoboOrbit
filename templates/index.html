@@ -20,31 +20,61 @@
             <button class="btn left-btn" data-direction="move_left"><i class="fas fa-arrow-left"></i></button>
             <button class="btn right-btn" data-direction="move_right"><i class="fas fa-arrow-right"></i></button>
             <button class="btn down-btn" data-direction="move_backward"><i class="fas fa-arrow-down"></i></button>
+            <button class="btn camera-up-btn" data-direction="camera_up"><i class="fas fa-video"></i><i class="fas fa-arrow-up"></i></button>
+            <button class="btn camera-down-btn" data-direction="camera_down"><i class="fas fa-video"></i><i class="fas fa-arrow-down"></i></button>
         </div>
-        <div class="special-controls">
-            <button class="btn special-btn" data-direction="open_delivery">Open Delivery</button>
-            <button class="btn special-btn" data-direction="close_delivery">Close Delivery</button>
-            <button class="btn special-btn" data-direction="increase_speed">Increase Speed</button>
-            <button class="btn special-btn" data-direction="decrease_speed">Decrease Speed</button>
+        <div class="sidebar">
+            <button class="sidebar-btn" data-direction="open_delivery">Open Delivery</button>
+            <button class="sidebar-btn" data-direction="close_delivery">Close Delivery</button>
+            <button class="sidebar-btn" data-direction="increase_speed">Increase Speed</button>
+            <button class="sidebar-btn" data-direction="decrease_speed">Decrease Speed</button>
         </div>
     </div>
+
     <script>
+        let intervalId;
+
+        function startSendingCommand(direction) {
+            sendCommand(direction);
+            intervalId = setInterval(() => sendCommand(direction), 100);
+        }
+
+        function stopSendingCommand() {
+            clearInterval(intervalId);
+        }
+
         function sendCommand(direction) {
             $.get(`/move/${direction}`, function () {
                 console.log(`Command sent: ${direction}`);
             });
         }
+
         document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('.btn').forEach(button => {
-                button.addEventListener('click', () => {
-                    const direction = button.getAttribute('data-direction');
-                    sendCommand(direction);
-                });
+            const buttons = document.querySelectorAll('.btn, .sidebar-btn');
+
+            buttons.forEach(button => {
+                const direction = button.getAttribute('data-direction');
+                const startHandler = (event) => {
+                    event.preventDefault();
+                    startSendingCommand(direction);
+                };
+                const stopHandler = () => {
+                    stopSendingCommand();
+                };
+
+                button.addEventListener('mousedown', startHandler);
+                button.addEventListener('touchstart', startHandler);
+
+                button.addEventListener('mouseup', stopHandler);
+                button.addEventListener('mouseleave', stopHandler);
+                button.addEventListener('touchend', stopHandler);
             });
         });
+
         function toggleFullscreen() {
             const videoContainer = document.getElementById('video-container');
             const fullscreenBtn = document.getElementById('fullscreen-btn');
+
             if (!document.fullscreenElement) {
                 videoContainer.requestFullscreen();
                 fullscreenBtn.textContent = "🔲";
