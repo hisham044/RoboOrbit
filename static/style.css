@@ -221,3 +221,54 @@ body, html {
 :fullscreen .overlay {
     display: flex !important;
 }
+
+/* Add these styles to your existing style.css */
+
+/* Ensure overlay and controls are visible in fullscreen */
+.video-container:fullscreen {
+    background: black;
+    width: 100vw;
+    height: 100vh;
+}
+
+.video-container:fullscreen .overlay,
+.video-container:-webkit-full-screen .overlay,
+.video-container:-moz-full-screen .overlay {
+    position: fixed;
+    display: flex !important;
+    z-index: 9999;
+}
+
+.video-container:fullscreen .fullscreen-btn,
+.video-container:-webkit-full-screen .fullscreen-btn,
+.video-container:-moz-full-screen .fullscreen-btn {
+    z-index: 10000;
+}
+
+/* Update fullscreen button styles */
+.fullscreen-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+}
+
+.fullscreen-btn i {
+    font-size: 20px;
+}
+
+/* Ensure controls remain visible and interactive */
+.left-controls,
+.right-controls {
+    z-index: 10000;
+}
+
+/* Additional fullscreen specific adjustments */
+:fullscreen .overlay {
+    background: transparent;
+}
+
+:fullscreen #video-feed {
+    object-fit: contain;
+}
