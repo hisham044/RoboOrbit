@@ -62,6 +62,8 @@ def move(direction):
         'camera_down': 6,
         'open_delivery': 7,
         'close_delivery': 8,
+        'increase_speed': 9,
+        'decrease_speed': 10
     }
     command = command_dict.get(direction, 0)  # Default to stop if invalid direction
     send_command_to_arduino(command)
