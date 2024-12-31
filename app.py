@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 # I2C setup (using the default I2C bus)
 bus = smbus2.SMBus(1)  # 1 is the default bus for Raspberry Pi
-arduino_address = 0x08  # Change this to your Arduino's I2C address
+arduino_address = 0x08  # Arduino's I2C address
 
 # Initialize Picamera2
 picam = Picamera2()
@@ -54,12 +54,14 @@ def video_feed():
 def move(direction):
     command_dict = {
         'stop': 0,
-        'up': 1,
-        'left': 2,
-        'right': 3,
-        'down': 4,
+        'move_forward': 1,
+        'move_left': 2,
+        'move_right': 3,
+        'move_backward': 4,
         'camera_up': 5,
-        'camera_down': 6        
+        'camera_down': 6,
+        'open_delivery': 7,
+        'close_delivery': 8,
     }
     command = command_dict.get(direction, 0)  # Default to stop if invalid direction
     send_command_to_arduino(command)
