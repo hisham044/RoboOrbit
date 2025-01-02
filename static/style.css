@@ -76,13 +76,32 @@ body, html {
 .left-controls {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px; /* Space between buttons */
     pointer-events: auto;
     position: fixed;
     left: 20px;
     top: 50%;
     transform: translateY(-50%);
 }
+
+.btn.horn-btn {
+    position: relative; /* Ensure it doesn't overlap */
+    order: 5; /* Adjust the button order if needed */
+    z-index: 100; /* Ensure it is above other elements */
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+}
+
+.btn.horn-btn:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
 
 .btn,
 .camera-up-btn,
@@ -97,12 +116,6 @@ body, html {
     transition: all 0.3s ease;
     position: absolute;
     font-size: 24px;
-}
-
-.btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .delivery-btn,
