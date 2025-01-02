@@ -76,7 +76,7 @@ body, html {
 .left-controls {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 15px;
     pointer-events: auto;
     position: fixed;
     left: 20px;
@@ -97,6 +97,12 @@ body, html {
     transition: all 0.3s ease;
     position: absolute;
     font-size: 24px;
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .delivery-btn,
