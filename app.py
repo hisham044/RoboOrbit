@@ -11,8 +11,6 @@ from gpiozero import DistanceSensor
 import pyzbar.pyzbar as pyzbar
 import threading
 import queue
-from collections import deque
-import statistics
 
 app = Flask(__name__)
 
@@ -121,47 +119,33 @@ def get_current_distance():
 def qr_scan():
     return render_template('qr_scan.html')
 
+class ScannerState:
+    def __init__(self):
+        self.scanning_active = False
+        self.last_active_time = 0
+        self.consecutive_no_person = 0
+        self.ACTIVATION_THRESHOLD = 5  # Number of consecutive readings needed to deactivate
+        self.SCANNING_TIMEOUT = 10  # Seconds to keep scanning active after last detection
 
-# Constants for detection stability
-DETECTION_WINDOW = 10  # Number of readings to consider
-DETECTION_THRESHOLD = 0.7  # Percentage of readings that need to be within range
-STABLE_READINGS_REQUIRED = 3  # Number of consecutive stable readings needed to change state
-
-class PersonDetector:
-    def __init__(self, threshold_distance):
-        self.threshold = threshold_distance
-        self.readings = deque(maxlen=DETECTION_WINDOW)
-        self.current_state = False
-        self.stable_count = 0
-        
     def update(self, distance):
-        if distance is None:
-            return self.current_state
-            
-        # Add new reading
-        self.readings.append(distance <= self.threshold)
+        current_time = time.time()
         
-        if len(self.readings) < DETECTION_WINDOW:
-            return self.current_state
-            
-        # Calculate percentage of positive readings
-        detection_ratio = sum(self.readings) / len(self.readings)
-        
-        # Determine if state should change
-        should_detect = detection_ratio >= DETECTION_THRESHOLD
-        
-        if should_detect == self.current_state:
-            self.stable_count = 0
+        if distance <= DISTANCE_THRESHOLD:
+            self.scanning_active = True
+            self.last_active_time = current_time
+            self.consecutive_no_person = 0
         else:
-            self.stable_count += 1
-            if self.stable_count >= STABLE_READINGS_REQUIRED:
-                self.current_state = should_detect
-                self.stable_count = 0
-                
-        return self.current_state
+            if self.scanning_active:
+                # Only increment if we're beyond the timeout period
+                if current_time - self.last_active_time > self.SCANNING_TIMEOUT:
+                    self.consecutive_no_person += 1
+                    if self.consecutive_no_person >= self.ACTIVATION_THRESHOLD:
+                        self.scanning_active = False
+                        self.consecutive_no_person = 0
 
-# Initialize the detector
-person_detector = PersonDetector(DISTANCE_THRESHOLD)
+        return self.scanning_active
+
+scanner_state = ScannerState()
 
 def gen_qr():
     """Generate frames for QR scanning page."""
@@ -174,58 +158,86 @@ def gen_qr():
         frame = cv2.flip(frame, 0)
         frame = cv2.flip(frame, 1)
         
-        # Get current distance and update detector
-        distance = get_current_distance()
-        person_detected = person_detector.update(distance)
-        
-        # Create clean frame for overlays
+        # Create a clean frame copy for overlays
         display_frame = frame.copy()
         
-        # Add distance box overlay
+        # Get current time and distance
+        current_time = datetime.now().strftime("%H:%M:%S")
+        distance = get_current_distance()
+        
+        # Update scanner state
+        scanning_active = scanner_state.update(distance) if distance is not None else False
+        
+        # Create the main overlay frame
+        h, w = frame.shape[:2]
+        overlay = np.zeros((h, w, 3), dtype=np.uint8)
+        
+        # Add time overlay in top-left corner
+        cv2.putText(overlay, current_time, (20, 40), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        
+        # Add distance indicator box
+        box_color = (0, 255, 0) if scanning_active else (128, 128, 128)
+        cv2.rectangle(overlay, (20, 60), (160, 100), box_color, -1)
         if distance is not None:
             distance_text = f"{distance:.1f} cm"
-            # Let the JavaScript handle the time display
-            
-            # Update detection state and scanning overlay
-            if person_detected:
-                h, w = frame.shape[:2]
-                qr_size = min(w, h) // 2
-                x1 = (w - qr_size) // 2
-                y1 = (h - qr_size) // 2
-                x2 = x1 + qr_size
-                y2 = y1 + qr_size
-                
-                # Draw semi-transparent overlay
-                overlay = display_frame.copy()
-                cv2.rectangle(overlay, (0, 0), (w, h), (0, 0, 0), -1)
-                cv2.rectangle(overlay, (x1, y1), (x2, y2), (255, 255, 255), 2)
-                display_frame = cv2.addWeighted(overlay, 0.3, display_frame, 0.7, 0)
-                
-                # Scan for QR codes
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                qr_codes = pyzbar.decode(gray)
-                
-                for qr in qr_codes:
-                    student_id = qr.data.decode('utf-8')
-                    last_qr_time = time.time()
-                    show_student_id = True
+            cv2.putText(overlay, distance_text, (30, 85),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
         else:
-            distance_text = "Sensor Error"
+            cv2.putText(overlay, "Sensor Error", (30, 85),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
         
-        # Show student ID for 3 seconds after scanning
+        # Show QR scanning overlay when active
+        if scanning_active:
+            # Calculate QR frame size (responsive to screen size)
+            qr_size = min(w, h) // 2
+            x1 = (w - qr_size) // 2
+            y1 = (h - qr_size) // 2
+            x2 = x1 + qr_size
+            y2 = y1 + qr_size
+            
+            # Draw semi-transparent QR frame
+            cv2.rectangle(overlay, (x1, y1), (x2, y2), (255, 255, 255), 2)
+            cv2.putText(overlay, "Position QR Code Here", (x1, y1 - 10),
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            
+            # Scan for QR codes
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            qr_codes = pyzbar.decode(gray)
+            
+            for qr in qr_codes:
+                student_id = qr.data.decode('utf-8')
+                last_qr_time = time.time()
+                show_student_id = True
+        
+        # Show student ID in a nice box if recently scanned
         if show_student_id and time.time() - last_qr_time < 3:
-            # Use HTML/CSS for overlay instead of OpenCV text
-            pass
+            # Create a background box for student ID
+            id_box_width = 300
+            id_box_height = 60
+            id_box_x = (w - id_box_width) // 2
+            id_box_y = h - 100
+            
+            cv2.rectangle(overlay, 
+                         (id_box_x, id_box_y),
+                         (id_box_x + id_box_width, id_box_y + id_box_height),
+                         (0, 255, 0), -1)
+            
+            cv2.putText(overlay, f"ID: {student_id}", 
+                       (id_box_x + 10, id_box_y + 40),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
         elif show_student_id:
             show_student_id = False
             student_id = None
+        
+        # Blend overlay with frame
+        display_frame = cv2.addWeighted(display_frame, 0.7, overlay, 0.3, 0)
         
         # Convert frame to JPEG
         ret, jpeg = cv2.imencode('.jpg', display_frame)
         if ret:
             yield (b'--frame\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
-
 
 @app.route('/video_feed_qr')
 def video_feed_qr():

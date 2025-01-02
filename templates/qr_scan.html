@@ -8,32 +8,15 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='qr_scan.css') }}">
 </head>
 <body>
-    <div class="container">
-        <div class="video-container">
+    <div class="main-container">
+        <div class="scanner-container">
             <div class="video-wrapper">
                 <img id="video-feed" src="{{ url_for('video_feed_qr') }}" alt="Video Feed">
-                <div class="overlay-info">
-                    <div class="time-display" id="time-display"></div>
-                    <div class="distance-box idle" id="distance-box"></div>
-                </div>
             </div>
         </div>
         <div class="navigation">
             <a href="/" class="nav-button">Back to Controls</a>
         </div>
     </div>
-
-    <script>
-        function updateTime() {
-            const timeDisplay = document.getElementById('time-display');
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString();
-            timeDisplay.textContent = timeStr;
-        }
-
-        // Update time every second
-        setInterval(updateTime, 1000);
-        updateTime(); // Initial update
-    </script>
 </body>
 </html>
