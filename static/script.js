@@ -1,6 +1,13 @@
 // static/script.js
 let intervalId;
     
+// Function playhorn (play the horn.wav file in static folder)
+function playHorn() {
+    const audio = new Audio('/static/horn.wav');
+    audio.play();
+}
+
+
 // Function to start sending commands continuously
 function startSendingCommand(direction) {
     sendCommand(direction);
