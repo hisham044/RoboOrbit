@@ -9,14 +9,14 @@ import cv2
 from datetime import datetime
 from gpiozero import DistanceSensor
 import pyzbar.pyzbar as pyzbar
+import threading
+import queue
 
 app = Flask(__name__)
 
-# I2C setup (using the default I2C bus)
-bus = smbus2.SMBus(1)  # 1 is the default bus for Raspberry Pi
-arduino_address = 0x08  # Arduino's I2C address
-
-# Initialize Picamera2
+# Existing setup
+bus = smbus2.SMBus(1)
+arduino_address = 0x08
 picam = Picamera2()
 picam.preview_configuration.main.size = (684, 385)
 picam.preview_configuration.main.format = "RGB888"
@@ -74,110 +74,122 @@ def move(direction):
     return '', 200
 
 
-# Initialize ultrasonic sensor
-ultrasonic = DistanceSensor(echo=17, trigger=4)
-
-# Global variables
+# New setup for QR scanning
 DISTANCE_THRESHOLD = 30  # cm
-QR_DISPLAY_TIME = 3  # seconds
-last_qr_time = 0
-last_qr_data = None
-is_person_detected = False
+try:
+    ultrasonic = DistanceSensor(echo=17, trigger=4)
+    SENSOR_ENABLED = True
+except Exception as e:
+    print(f"Error initializing distance sensor: {e}")
+    SENSOR_ENABLED = False
+
+# Queue for distance readings
+distance_queue = queue.Queue(maxsize=1)
 
 def get_distance():
     """Get distance reading from ultrasonic sensor."""
-    return ultrasonic.distance * 100  # Convert to cm
-
-def detect_qr_code(frame):
-    """Detect and decode QR codes in the frame."""
-    decoded_objects = pyzbar.decode(frame)
-    for obj in decoded_objects:
-        if obj.type == 'QRCODE':
-            return obj.data.decode('utf-8')
-    return None
-
-def draw_overlay(frame, distance):
-    """Draw time and distance overlay on frame."""
-    height, width = frame.shape[:2]
-    
-    # Add semi-transparent overlay
-    overlay = frame.copy()
-    
-    # Draw time and distance
-    current_time = datetime.now().strftime("%H:%M:%S")
-    cv2.putText(overlay, f"Time: {current_time}", (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-    cv2.putText(overlay, f"Distance: {distance:.1f} cm", (10, 70),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-    
-    # Draw QR code guide if person detected
-    if is_person_detected:
-        # Calculate center square
-        square_size = min(width, height) // 2
-        x = (width - square_size) // 2
-        y = (height - square_size) // 2
-        
-        # Draw semi-transparent overlay
-        cv2.rectangle(overlay, (x, y), (x + square_size, y + square_size),
-                     (0, 255, 0), 2)
-        cv2.putText(overlay, "Position QR Code Here", (x, y - 10),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    
-    # If QR code was recently detected, show the data
-    global last_qr_time, last_qr_data
-    if time.time() - last_qr_time < QR_DISPLAY_TIME and last_qr_data:
-        cv2.putText(overlay, f"Student ID: {last_qr_data}", (width//4, height//2),
-                   cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3)
-    
-    # Blend the overlay with the original frame
-    alpha = 0.7
-    frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
-    return frame
-
-def gen2():
-    """Generate frames from the camera with overlay."""
-    global is_person_detected, last_qr_time, last_qr_data
-    
     while True:
-        # Capture frame
-        frame = picam.capture_array()
-        frame = cv2.flip(frame, 0)
-        frame = cv2.flip(frame, 1)
-        
-        # Get distance reading
-        distance = get_distance()
-        
-        # Update person detection state
-        is_person_detected = distance < DISTANCE_THRESHOLD
-        
-        # If person detected, try to scan QR code
-        if is_person_detected:
-            qr_data = detect_qr_code(frame)
-            if qr_data:
-                last_qr_data = qr_data
-                last_qr_time = time.time()
-        
-        # Add overlay to frame
-        frame = draw_overlay(frame, distance)
-        
-        # Encode frame
-        ret, jpeg = cv2.imencode('.jpg', frame)
-        if ret:
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
+        try:
+            if SENSOR_ENABLED:
+                distance = ultrasonic.distance * 100  # Convert to cm
+                # Update queue with latest reading
+                try:
+                    distance_queue.get_nowait()  # Remove old value if exists
+                except queue.Empty:
+                    pass
+                distance_queue.put(distance)
+            time.sleep(0.1)
+        except Exception as e:
+            print(f"Error reading distance: {e}")
+            time.sleep(1)
+
+# Start distance reading thread
+distance_thread = threading.Thread(target=get_distance, daemon=True)
+distance_thread.start()
+
+def get_current_distance():
+    """Get the most recent distance reading."""
+    try:
+        return distance_queue.get_nowait()
+    except queue.Empty:
+        return None
+
 
 @app.route('/qr-scan')
 def qr_scan():
     return render_template('qr_scan.html')
 
-@app.route('/video_feed2')
-def video_feed2():
-    return Response(gen2(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+def gen_qr():
+    """Generate frames for QR scanning page."""
+    last_qr_time = 0
+    student_id = None
+    show_student_id = False
+    
+    while True:
+        frame = picam.capture_array()
+        frame = cv2.flip(frame, 0)
+        frame = cv2.flip(frame, 1)
+        
+        # Get current time and distance
+        current_time = datetime.now().strftime("%H:%M:%S")
+        distance = get_current_distance()
+        
+        # Add time overlay
+        cv2.putText(frame, current_time, (10, 30), 
+                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        
+        # Add distance overlay or error message
+        if distance is not None:
+            distance_text = f"Distance: {distance:.1f} cm"
+            cv2.putText(frame, distance_text, (10, 70),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            
+            # Show QR scanning overlay when person is detected
+            if distance <= DISTANCE_THRESHOLD:
+                h, w = frame.shape[:2]
+                qr_size = min(w, h) // 2
+                x1 = (w - qr_size) // 2
+                y1 = (h - qr_size) // 2
+                x2 = x1 + qr_size
+                y2 = y1 + qr_size
+                
+                # Draw semi-transparent overlay
+                overlay = frame.copy()
+                cv2.rectangle(overlay, (0, 0), (w, h), (0, 0, 0), -1)
+                cv2.rectangle(overlay, (x1, y1), (x2, y2), (255, 255, 255), 2)
+                frame = cv2.addWeighted(overlay, 0.3, frame, 0.7, 0)
+                
+                # Scan for QR codes
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                qr_codes = pyzbar.decode(gray)
+                
+                for qr in qr_codes:
+                    student_id = qr.data.decode('utf-8')
+                    last_qr_time = time.time()
+                    show_student_id = True
+        else:
+            cv2.putText(frame, "Error: Distance sensor not available",
+                       (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        
+        # Show student ID for 3 seconds after scanning
+        if show_student_id and time.time() - last_qr_time < 3:
+            cv2.putText(frame, f"Student ID: {student_id}", (10, 110),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        elif show_student_id:
+            show_student_id = False
+            student_id = None
+        
+        # Convert frame to JPEG
+        ret, jpeg = cv2.imencode('.jpg', frame)
+        if ret:
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
 
-@app.route('/get_distance')
-def get_distance_route():
-    return jsonify({'distance': get_distance()})
+@app.route('/video_feed_qr')
+def video_feed_qr():
+    return Response(gen_qr(),
+                   mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, threaded=True)

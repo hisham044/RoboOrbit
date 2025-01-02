@@ -4,41 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Code Scanner</title>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #000;
-        }
-        .video-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-        #video-feed {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-    </style>
+    <title>QR Scanner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='qr_scan.css') }}">
 </head>
 <body>
-    <div class="video-container">
-        <img id="video-feed" src="{{ url_for('video_feed') }}" alt="Video Feed">
-        <div class="overlay" id="overlay"></div>
+    <div class="container">
+        <div class="video-container">
+            <img id="video-feed" src="{{ url_for('video_feed_qr') }}" alt="Video Feed">
+        </div>
+        <div class="navigation">
+            <a href="/" class="nav-button">Back to Controls</a>
+        </div>
     </div>
 </body>
 </html>
