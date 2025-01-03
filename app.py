@@ -1,11 +1,14 @@
 # app.py
-from flask import Flask, render_template, Response, jsonify
+from flask import Flask, render_template, Response, jsonify, request
 from config import Config
 from db import db, Program, ProgramList, Student
 from camera import Camera
 from arduino_controller import ArduinoController
 from distance_sensor import DistanceSensorManager
 from qr_scanner import QRScanner
+import pyttsx3
+import os
+import tempfile
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -17,6 +20,11 @@ arduino = ArduinoController()
 distance_sensor = DistanceSensorManager()
 qr_scanner = QRScanner(camera, distance_sensor)
 
+# Initialize text-to-speech engine
+engine = pyttsx3.init()
+engine.setProperty('rate', 150)
+engine.setProperty('voice', 'english+m1')  # Set male voice
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -24,6 +32,25 @@ def index():
 @app.route('/drive')
 def drive():
     return render_template('drive.html')
+
+# Add this new route to app.py
+@app.route('/tts', methods=['GET', 'POST'])
+def text_to_speech():
+    if request.method == 'POST':
+        text = request.form.get('text', '')
+        if text:
+            engine = pyttsx3.init()
+            # Set properties for male voice
+            voices = engine.getProperty('voices')
+            engine.setProperty('voice', voices[0].id)  # Index 0 is usually male voice
+            engine.setProperty('rate', 350)    # Speed of speech
+            
+            # Speak the text
+            engine.say(text)
+            engine.runAndWait()
+            return jsonify({'status': 'success', 'message': 'Text spoken successfully'})
+        return jsonify({'status': 'error', 'message': 'No text provided'})
+    return render_template('tts.html')
 
 def gen():
     while True:
@@ -65,10 +92,7 @@ def programs():
 
 @app.route("/program/<int:program_id>")
 def program_details(program_id):
-    # Fetch the program details
     program = Program.query.get_or_404(program_id)
-
-    # Fetch all associated students from programlist and students tables
     program_lists = ProgramList.query.filter_by(program=program_id).all()
     student_details = [
         {
@@ -77,13 +101,11 @@ def program_details(program_id):
         }
         for entry in program_lists
     ]
-
     return render_template(
         "program_details.html",
         program=program,
         student_details=student_details
     )
-
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False, threaded=True)
