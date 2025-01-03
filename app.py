@@ -43,6 +43,32 @@ def text_to_speech():
         return jsonify({'status': 'error', 'message': 'No text provided'})
     return render_template('tts.html')
 
+@app.route('/get_distance')
+def get_distance():
+    distance = distance_sensor.get_current_distance()
+    if distance is not None:
+        return jsonify({'distance': distance})
+    return jsonify({'distance': -1})  # Indicate sensor error
+
+# app.py updates
+@app.route('/qr-scan')
+def qr_scan():
+    return render_template('qr_scan.html')
+
+@app.route('/scan-popup')
+def scan_popup():
+    return render_template('scan_popup.html')
+
+@app.route('/check_scan_status')
+def check_scan_status():
+    distance = distance_sensor.get_current_distance()
+    scan_result = qr_scanner.get_scan_result()
+    return jsonify({
+        'distance': distance,
+        'should_show_popup': distance is not None and 0 < distance < 30,
+        'scan_result': scan_result
+    })
+
 def gen():
     while True:
         frame = camera.get_jpeg_frame()
@@ -59,10 +85,6 @@ def video_feed():
 def move(direction):
     arduino.send_command(direction)
     return '', 200
-
-@app.route('/qr-scan')
-def qr_scan():
-    return render_template('qr_scan.html')
 
 def gen_qr():
     while True:

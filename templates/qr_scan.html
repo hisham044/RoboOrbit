@@ -1,22 +1,114 @@
-<!-- templates/qr_scan.html -->
+<!-- # templates/qr_scan.html updates -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Scanner</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='qr_scan.css') }}">
+    <style>
+        .distance-display {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 5px;
+        }
+        .scan-result {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 5px;
+            display: none;
+        }
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .popup-content {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 1001;
+        }
+    </style>
 </head>
 <body>
-    <div class="main-container">
-        <div class="scanner-container">
+    <div class="distance-display">
+        Distance: <span id="distance">--</span> cm
+    </div>
+    <div class="scan-result" id="scanResult"></div>
+    <div class="popup-overlay" id="scanPopup">
+        <div class="popup-content">
             <div class="video-wrapper">
                 <img id="video-feed" src="{{ url_for('video_feed_qr') }}" alt="Video Feed">
             </div>
         </div>
-        <div class="navigation">
-            <a href="/" class="nav-button">Back to Controls</a>
-        </div>
     </div>
+    <script>
+        let popupTimer = null;
+        let lastPopupTime = 0;
+        const MIN_POPUP_DURATION = 5000; // 5 seconds
+
+        function updateStatus() {
+            fetch('/check_scan_status')
+                .then(response => response.json())
+                .then(data => {
+                    // Update distance display
+                    document.getElementById('distance').textContent = 
+                        data.distance !== null ? data.distance.toFixed(1) : 'Error';
+
+                    // Handle popup visibility
+                    const popup = document.getElementById('scanPopup');
+                    const currentTime = Date.now();
+                    
+                    if (data.should_show_popup) {
+                        if (!popup.style.display || popup.style.display === 'none') {
+                            popup.style.display = 'block';
+                            lastPopupTime = currentTime;
+                        }
+                        // Reset popup timer
+                        if (popupTimer) clearTimeout(popupTimer);
+                        popupTimer = setTimeout(() => {
+                            const timeElapsed = Date.now() - lastPopupTime;
+                            if (timeElapsed >= MIN_POPUP_DURATION) {
+                                popup.style.display = 'none';
+                            }
+                        }, MIN_POPUP_DURATION);
+                    } else {
+                        const timeElapsed = currentTime - lastPopupTime;
+                        if (timeElapsed >= MIN_POPUP_DURATION) {
+                            popup.style.display = 'none';
+                        }
+                    }
+
+                    // Handle scan results
+                    if (data.scan_result) {
+                        const resultDiv = document.getElementById('scanResult');
+                        resultDiv.textContent = `Scanned: ${data.scan_result}`;
+                        resultDiv.style.display = 'block';
+                        setTimeout(() => {
+                            resultDiv.style.display = 'none';
+                        }, 5000);
+                    }
+                });
+        }
+
+        // Update status every 100ms
+        setInterval(updateStatus, 100);
+    </script>
 </body>
 </html>
