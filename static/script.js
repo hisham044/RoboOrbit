@@ -71,6 +71,11 @@ document.addEventListener('DOMContentLoaded', () => {
     buttons.forEach(button => {
         const direction = button.getAttribute('data-direction');
 
+        if (!direction) {
+            // Skip buttons like the horn button that don't have data-direction
+            return;
+        }
+
         const startHandler = (event) => {
             event.preventDefault();
             startSendingCommand(direction);
@@ -86,4 +91,10 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('mouseleave', stopHandler);
         button.addEventListener('touchend', stopHandler);
     });
+
+    // Explicitly set up the horn button
+    const hornButton = document.querySelector('.horn-btn');
+    if (hornButton) {
+        hornButton.addEventListener('click', playHorn);
+    }
 });
