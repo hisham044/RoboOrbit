@@ -9,6 +9,7 @@ from qr_scanner import QRScanner
 import pyttsx3
 import os
 import tempfile
+from tts import TTS
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -21,9 +22,7 @@ distance_sensor = DistanceSensorManager()
 qr_scanner = QRScanner(camera, distance_sensor)
 
 # Initialize text-to-speech engine
-engine = pyttsx3.init()
-engine.setProperty('rate', 150)
-engine.setProperty('voice', 'english+m1')  # Set male voice
+ttS = TTS()
 
 @app.route('/')
 def index():
@@ -39,15 +38,7 @@ def text_to_speech():
     if request.method == 'POST':
         text = request.form.get('text', '')
         if text:
-            engine = pyttsx3.init()
-            # Set properties for male voice
-            voices = engine.getProperty('voices')
-            engine.setProperty('voice', voices[0].id)  # Index 0 is usually male voice
-            engine.setProperty('rate', 350)    # Speed of speech
-            
-            # Speak the text
-            engine.say(text)
-            engine.runAndWait()
+            ttS.speak(text)
             return jsonify({'status': 'success', 'message': 'Text spoken successfully'})
         return jsonify({'status': 'error', 'message': 'No text provided'})
     return render_template('tts.html')
