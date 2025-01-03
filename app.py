@@ -104,7 +104,7 @@ def programs():
     return render_template("programs.html", programs=all_programs)
 
 @app.route("/program/<int:program_id>")
-def program_details(program_id):
+def program_handle(program_id):
     program = Program.query.get_or_404(program_id)
     program_lists = ProgramList.query.filter_by(program=program_id).all()
     student_details = [
@@ -115,7 +115,7 @@ def program_details(program_id):
         for entry in program_lists
     ]
     return render_template(
-        "program_details.html",
+        "program_handle.html",
         program=program,
         student_details=student_details
     )

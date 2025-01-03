@@ -26,44 +26,6 @@ function sendCommand(direction) {
     });
 }
 
-// Updated fullscreen toggle function
-function toggleFullscreen() {
-    const videoContainer = document.getElementById('video-container');
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
-    const fullscreenIcon = fullscreenBtn.querySelector('i');
-
-    if (!document.fullscreenElement) {
-        videoContainer.requestFullscreen().catch(err => {
-            console.log(`Error attempting to enable fullscreen: ${err.message}`);
-        });
-        fullscreenIcon.classList.remove('fa-expand');
-        fullscreenIcon.classList.add('fa-compress');
-    } else {
-        document.exitFullscreen().catch(err => {
-            console.log(`Error attempting to exit fullscreen: ${err.message}`);
-        });
-        fullscreenIcon.classList.remove('fa-compress');
-        fullscreenIcon.classList.add('fa-expand');
-    }
-}
-
-// Enhanced fullscreen change event handler
-document.addEventListener('fullscreenchange', () => {
-    const overlay = document.getElementById('overlay');
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
-    const fullscreenIcon = fullscreenBtn.querySelector('i');
-    
-    if (document.fullscreenElement) {
-        overlay.style.display = 'flex';
-        fullscreenIcon.classList.remove('fa-expand');
-        fullscreenIcon.classList.add('fa-compress');
-    } else {
-        overlay.style.display = 'flex';
-        fullscreenIcon.classList.remove('fa-compress');
-        fullscreenIcon.classList.add('fa-expand');
-    }
-});
-
 // Attach event listeners to buttons for continuous commands
 document.addEventListener('DOMContentLoaded', () => {
     const buttons = document.querySelectorAll('.btn');

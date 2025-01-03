@@ -1,0 +1,315 @@
+<!-- program_handle.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ program.name }} Details</title>
+    <link rel="stylesheet" href="/static/p.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        .container {
+            max-height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            padding: 1rem;
+        }
+
+        .container .table-cont {
+            display: flex;
+            overflow: hidden;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .tbl {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background: white;
+        }
+
+
+        /* QR Scanner Styles */
+        .distance-display {
+            position: fixed;
+            top: 40px;
+            left: 20px;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .popup-content {
+            position: fixed;
+            top: 10%;
+            left: 10%;
+            right: 10%;
+            bottom: 10%;
+            aspect-ratio: 1/1;
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            z-index: 1001;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .video-wrapper {
+            justify-content: center;
+            align-items: center;
+            max-width: 100%;
+            height: 100%;
+            /* max-height: 70vh; */
+            aspect-ratio: 1/1;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+
+        }
+
+        .video-wrapper img {
+            width: auto;
+            height: 100%;
+
+        }
+
+        .reported {
+            background-color: #d4edda !important;
+            color: #155724 !important;
+        }
+
+        .scan-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 25px;
+            background-color: #28a745;
+            color: white;
+            border-radius: 5px;
+            display: none;
+            z-index: 1002;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body style="padding-right: 1rem;">
+    <div class="container">
+        <h1 class="text-center" style="text-transform: uppercase; margin-bottom:0; font-weight:bold;">
+            {{ program.category }} {{ program.name }}
+        </h1>
+        <div class="table-cont">
+            <h2 class="text-center">Participants</h2>
+            <div class="h-full tbl">
+                <table class="table table-striped" id="participantsTable">
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Jamia ID</th>
+                            <th>Name</th>
+                            <th>Code</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in student_details %}
+                        <tr data-jamia-id="{{ entry.student.jamiaNo }}">
+                            <td>{{ loop.index }}</td>
+                            <td>{{ entry.student.jamiaNo }}</td>
+                            <td>{{ entry.student.name }}</td>
+                            <td>{{ entry.code }}</td>
+                            <td class="status-cell">not reported</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Scanner Components -->
+    <div class="distance-display">
+        Distance: <br><span id="distance">--</span> cm
+    </div>
+    <div class="popup-overlay" id="scanPopup">
+        <div class="popup-content">
+            <div class="video-wrapper">
+                <img id="video-feed" src="{{ url_for('video_feed_qr') }}" alt="Video Feed">
+            </div>
+        </div>
+    </div>
+    <div class="scan-notification" id="scanNotification"></div>
+
+    <script>
+        // Store reported students locally
+        let reportedStudents = new Set();
+        let nextCode = 'A';
+        let studentCodes = {};
+
+        function getNextCode() {
+            let code = nextCode;
+            if (nextCode.length === 1 && nextCode === 'Z') {
+                nextCode = 'AA';
+            } else if (nextCode.length === 1) {
+                nextCode = String.fromCharCode(nextCode.charCodeAt(0) + 1);
+            } else {
+                let lastChar = nextCode.charAt(nextCode.length - 1);
+                if (lastChar === 'Z') {
+                    nextCode = nextCode.slice(0, -1) + 'A' + 'A';
+                } else {
+                    nextCode = nextCode.slice(0, -1) + String.fromCharCode(lastChar.charCodeAt(0) + 1);
+                }
+            }
+            return code;
+        }
+
+        async function speakCode(code) {
+            try {
+                await fetch('/tts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `text=Note your code letter is ${code}.`
+                });
+            } catch (error) {
+                console.error('TTS error:', error);
+            }
+        }
+
+
+        // Update student status        
+        async function updateStudentStatus(jamiaId) {
+            const row = document.querySelector(`tr[data-jamia-id="${jamiaId}"]`);
+            if (row && !reportedStudents.has(jamiaId)) {
+                const statusCell = row.querySelector('.status-cell');
+                const codeCell = row.querySelector('td:nth-child(4)');
+                const code = getNextCode();
+                
+                statusCell.textContent = 'reported';
+                codeCell.textContent = code;
+                row.classList.add('reported');
+                reportedStudents.add(jamiaId);
+                studentCodes[jamiaId] = code;
+
+                // Save to localStorage
+                localStorage.setItem('reportedStudents', JSON.stringify([...reportedStudents]));
+                localStorage.setItem('studentCodes', JSON.stringify(studentCodes));
+                localStorage.setItem('nextCode', nextCode);
+
+                // Show notification and speak code
+                const notification = document.getElementById('scanNotification');
+                notification.textContent = `Participant Reported - Code: ${code}`;
+                notification.style.display = 'block';
+                
+                await speakCode(code);
+                
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        function loadReportedStudents() {
+            const savedStudents = localStorage.getItem('reportedStudents');
+            const savedCodes = localStorage.getItem('studentCodes');
+            const savedNextCode = localStorage.getItem('nextCode');
+
+            if (savedStudents && savedCodes && savedNextCode) {
+                reportedStudents = new Set(JSON.parse(savedStudents));
+                studentCodes = JSON.parse(savedCodes);
+                nextCode = savedNextCode;
+
+                reportedStudents.forEach(id => {
+                    const row = document.querySelector(`tr[data-jamia-id="${id}"]`);
+                    if (row) {
+                        const statusCell = row.querySelector('.status-cell');
+                        const codeCell = row.querySelector('td:nth-child(4)');
+                        statusCell.textContent = 'reported';
+                        codeCell.textContent = studentCodes[id];
+                        row.classList.add('reported');
+                    }
+                });
+            }
+        }
+
+        // QR Scanner functionality
+        let popupTimer = null;
+        let lastPopupTime = 0;
+        const MIN_POPUP_DURATION = 5000;
+
+        function updateStatus() {
+            fetch('/check_scan_status')
+                .then(response => response.json())
+                .then(data => {
+                    // Update distance display
+                    document.getElementById('distance').textContent =
+                        data.distance !== null ? data.distance.toFixed(1) : 'Error';
+
+                    // Handle popup visibility
+                    const popup = document.getElementById('scanPopup');
+                    const currentTime = Date.now();
+
+                    if (data.should_show_popup) {
+                        if (!popup.style.display || popup.style.display === 'none') {
+                            popup.style.display = 'block';
+                            lastPopupTime = currentTime;
+                        }
+                        if (popupTimer) clearTimeout(popupTimer);
+                        popupTimer = setTimeout(() => {
+                            const timeElapsed = Date.now() - lastPopupTime;
+                            if (timeElapsed >= MIN_POPUP_DURATION) {
+                                popup.style.display = 'none';
+                            }
+                        }, MIN_POPUP_DURATION);
+                    } else {
+                        const timeElapsed = currentTime - lastPopupTime;
+                        if (timeElapsed >= MIN_POPUP_DURATION) {
+                            popup.style.display = 'none';
+                        }
+                    }
+
+                    // Handle scan results
+                    if (data.scan_result && !reportedStudents.has(data.scan_result)) {
+                        updateStudentStatus(data.scan_result);
+                    }
+                });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function () {
+            loadReportedStudents();
+            setInterval(updateStatus, 100);
+        });
+    </script>
+</body>
+
+</html>
