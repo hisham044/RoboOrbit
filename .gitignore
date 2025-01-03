@@ -1,0 +1,27 @@
+# Python bytecode files
+__pycache__/
+*.py[cod]
+
+# Environment variable files
+.env
+
+# Log files
+*.log
+
+# Flask specific
+instance/
+*.db
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Virtual Environment
+venv/
+env/
+*.env/
+
+# Other generated files
+*.lgd
+*.bak
+*.swp
