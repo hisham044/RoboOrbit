@@ -35,6 +35,56 @@
             </tbody>
         </table>
     </div>
+    <script>
+        document.addEventListener('keydown', async (event) => {
+            if (event.key === 'R' || event.key === 'r') {
+                // Find the first program with status 'pending'
+                const rows = document.querySelectorAll('tbody tr');
+                let firstPendingRow = null;
+    
+                for (const row of rows) {
+                    const statusCell = row.querySelector('td:last-child');
+                    if (statusCell && statusCell.textContent.trim().toLowerCase() === 'pending') {
+                        firstPendingRow = row;
+                        break;
+                    }
+                }
+    
+                if (firstPendingRow) {
+                    const programId = firstPendingRow.querySelector('td:first-child').textContent.trim();
+                    const programName = firstPendingRow.querySelector('td:nth-child(2)').textContent.trim();
+    
+                    // Update the status via Flask endpoint
+                    try {
+                        const response = await fetch(`/update_status/${programId}`, {
+                            method: 'POST',
+                        });
+    
+                        if (response.ok) {
+                            // Navigate to the program's page
+                            window.location.href = `/program/${programId}`;
+    
+                            // Speak the message
+                            await fetch('/tts', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                },
+                                body: `text=Reporting started for ${encodeURIComponent(programName)}.`,
+                            });
+                        } else {
+                            console.error('Failed to update program status');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                    }
+                } else {
+                    console.warn('No pending program found');
+                }
+            }
+        });
+    </script>
+    
 </body>
 
 </html>

@@ -54,23 +54,48 @@ class QRScanner:
         if frame is None:
             return None
 
-        # Add QR scanning box (non-blinking)
+        # # Flip the frame vertically
+        # frame = cv2.flip(frame, 0)
+
+        # Define the area for processing (focused rectangle)
         h, w = frame.shape[:2]
         qr_size = min(w, h) // 2
         x1 = (w - qr_size) // 2
         y1 = (h - qr_size) // 2
         x2 = x1 + qr_size
         y2 = y1 + qr_size
-        
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255), 2)
+        qr_roi = frame[y1:y2, x1:x2]
 
-        # Process QR codes
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        qr_codes = pyzbar.decode(gray)
-        
+        # Convert to grayscale
+        gray = cv2.cvtColor(qr_roi, cv2.COLOR_BGR2GRAY)
+
+        # Apply GaussianBlur to reduce noise
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        # Increase contrast using histogram equalization
+        equalized = cv2.equalizeHist(blurred)
+
+        # Sharpen the image
+        kernel = np.array([[0, -1, 0],
+                        [-1, 5, -1],
+                        [0, -1, 0]])
+        sharpened = cv2.filter2D(equalized, -1, kernel)
+
+        # Apply adaptive thresholding
+        thresholded = cv2.adaptiveThreshold(
+            sharpened, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+
+        # Decode QR codes
+        qr_codes = pyzbar.decode(thresholded)
         for qr in qr_codes:
             self.last_scan_result = qr.data.decode('utf-8')
             self.scan_timestamp = time.time()
 
+        # Draw the rectangle and place the processed ROI back into the frame
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255), 2)
+        frame[y1:y2, x1:x2] = cv2.cvtColor(thresholded, cv2.COLOR_GRAY2BGR)
+
         ret, jpeg = cv2.imencode('.jpg', frame)
         return jpeg.tobytes() if ret else None
+
+    

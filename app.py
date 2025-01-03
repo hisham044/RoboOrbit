@@ -32,6 +32,16 @@ def index():
 def drive():
     return render_template('drive.html')
 
+@app.route('/update_status/<int:program_id>', methods=['POST'])
+def update_status(program_id):
+    program = Program.query.get(program_id)
+    if program and program.status == 'pending':
+        program.status = 'reporting'
+        db.session.commit()
+        return '', 200
+    return 'Not Found', 404
+
+
 # Add this new route to app.py
 @app.route('/tts', methods=['GET', 'POST'])
 def text_to_speech():

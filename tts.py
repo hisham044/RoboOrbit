@@ -64,13 +64,11 @@
 # if __name__ == "__main__":
 #     tts = TTS()
 #     tts.run()
-
 import pyttsx3
 
 class TTS:
     def __init__(self):
-        # Initialize the TTS engine
-        self.engine = pyttsx3.init(driverName='espeak')  # Use espeak as the backend
+        self.engine = pyttsx3.init(driverName='espeak')  # Initialize the TTS engine
         self.engine.setProperty('voice', 'english+m4')  # Set male voice (espeak's m3 voice)
         self.engine.setProperty('rate', 140)  # Set speaking rate
         self.engine.setProperty('volume', 1.0)  # Set volume (0.0 to 1.0)
@@ -78,8 +76,23 @@ class TTS:
     def speak(self, text):
         """Speak the given text."""
         print(f"Input: {text}")
+
+        # Attempt to stop any ongoing speech and reset the engine
+        self._stop_speech()
+
+        # Start the speech
         self.engine.say(text)
         self.engine.runAndWait()
+
+    def _stop_speech(self):
+        """Stops the speech if it's running and resets the engine."""
+        if self.engine._inLoop:
+            self.engine.endLoop()  # Stop the current speech loop if running
+            self.engine = pyttsx3.init(driverName='espeak')  # Reinitialize the engine
+            self.engine.setProperty('voice', 'english+m4')
+            self.engine.setProperty('rate', 140)
+            self.engine.setProperty('volume', 1.0)
+
 
     def run(self):
         """Continuously read input from the terminal and convert to speech."""

@@ -107,16 +107,35 @@
 
         .scan-notification {
             position: fixed;
-            bottom: 20px;
+            bottom: 50%;
             left: 50%;
             transform: translateX(-50%);
-            padding: 15px 25px;
+            padding: 20px 30px;
             background-color: #28a745;
             color: white;
-            border-radius: 5px;
+            border-radius: 8px;
             display: none;
             z-index: 1002;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .scan-code-label {
+            font-size: 16px;
+            font-weight: normal;
+            display: block;
+        }
+
+        .scan-code {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .scan-success-message {
+            font-size: 14px;
+            font-weight: normal;
+            display: block;
         }
     </style>
 </head>
@@ -166,13 +185,19 @@
             </div>
         </div>
     </div>
-    <div class="scan-notification" id="scanNotification"></div>
+    <div class="scan-notification" id="scanNotification">
+        <span class="scan-code-label">Code:</span>
+        <div class="scan-code"></div>
+        <span class="scan-success-message">Participant Reported Successfully</span>
+    </div>
 
     <script>
         // Store reported students locally
         let reportedStudents = new Set();
         let nextCode = 'A';
         let studentCodes = {};
+        let lastSpokenTime = 0;
+        const SPEAK_INTERVAL = 5000; // 5 seconds between speaking prompts
 
         function getNextCode() {
             let code = nextCode;
@@ -191,18 +216,22 @@
             return code;
         }
 
-        async function speakCode(code) {
+        async function speakText(text) {
             try {
                 await fetch('/tts', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: `text=Note your code letter is ${code}.`
+                    body: `text=${text}`
                 });
             } catch (error) {
                 console.error('TTS error:', error);
             }
+        }
+
+        async function speakCode(code) {
+            await speakText(`Note your code letter is ${code}.`);
         }
 
 
@@ -213,7 +242,7 @@
                 const statusCell = row.querySelector('.status-cell');
                 const codeCell = row.querySelector('td:nth-child(4)');
                 const code = getNextCode();
-                
+
                 statusCell.textContent = 'reported';
                 codeCell.textContent = code;
                 row.classList.add('reported');
@@ -225,19 +254,22 @@
                 localStorage.setItem('studentCodes', JSON.stringify(studentCodes));
                 localStorage.setItem('nextCode', nextCode);
 
-                // Show notification and speak code
+                // Show notification with improved layout
                 const notification = document.getElementById('scanNotification');
-                notification.textContent = `Participant Reported - Code: ${code}`;
+                notification.querySelector('.scan-code-label').textContent = "Code:";
+                notification.querySelector('.scan-code').textContent = code;
+                notification.querySelector('.scan-success-message').textContent = "Participant Reported Successfully";
                 notification.style.display = 'block';
-                
+
                 await speakCode(code);
-                
+
                 setTimeout(() => {
                     notification.style.display = 'none';
                 }, 3000);
             }
         }
 
+        
         function loadReportedStudents() {
             const savedStudents = localStorage.getItem('reportedStudents');
             const savedCodes = localStorage.getItem('studentCodes');
@@ -266,48 +298,56 @@
         let lastPopupTime = 0;
         const MIN_POPUP_DURATION = 5000;
 
-        function updateStatus() {
-            fetch('/check_scan_status')
-                .then(response => response.json())
-                .then(data => {
-                    // Update distance display
-                    document.getElementById('distance').textContent =
-                        data.distance !== null ? data.distance.toFixed(1) : 'Error';
+        let isUpdating = false;
 
-                    // Handle popup visibility
-                    const popup = document.getElementById('scanPopup');
-                    const currentTime = Date.now();
+        async function updateStatus() {
+            if (isUpdating) return; // Prevent overlapping calls
+            isUpdating = true;
 
-                    if (data.should_show_popup) {
-                        if (!popup.style.display || popup.style.display === 'none') {
-                            popup.style.display = 'block';
-                            lastPopupTime = currentTime;
-                        }
-                        if (popupTimer) clearTimeout(popupTimer);
-                        popupTimer = setTimeout(() => {
-                            const timeElapsed = Date.now() - lastPopupTime;
-                            if (timeElapsed >= MIN_POPUP_DURATION) {
-                                popup.style.display = 'none';
-                            }
-                        }, MIN_POPUP_DURATION);
-                    } else {
-                        const timeElapsed = currentTime - lastPopupTime;
-                        if (timeElapsed >= MIN_POPUP_DURATION) {
-                            popup.style.display = 'none';
-                        }
+            try {
+                const response = await fetch('/check_scan_status');
+                const data = await response.json();
+
+                // Update distance display
+                document.getElementById('distance').textContent =
+                    data.distance !== null ? data.distance.toFixed(1) : 'Error';
+
+                const popup = document.getElementById('scanPopup');
+                const currentTime = Date.now();
+
+                // Show popup and speak prompt
+                if (data.should_show_popup && (!popup.style.display || popup.style.display === 'none')) {
+                    if (currentTime - lastSpokenTime > SPEAK_INTERVAL) {
+                        await speakText("Please scan your ID card");
+                        lastSpokenTime = currentTime;
                     }
+                    popup.style.display = 'block';
+                    lastPopupTime = currentTime;
+                }
 
-                    // Handle scan results
-                    if (data.scan_result && !reportedStudents.has(data.scan_result)) {
-                        updateStudentStatus(data.scan_result);
+                // Hide popup after a duration
+                if (!data.should_show_popup) {
+                    if (currentTime - lastPopupTime >= MIN_POPUP_DURATION) {
+                        popup.style.display = 'none';
                     }
-                });
+                }
+
+                // Handle scan results
+                if (data.scan_result && !reportedStudents.has(data.scan_result)) {
+                    await updateStudentStatus(data.scan_result);
+                }
+            } catch (error) {
+                console.error('Error in updateStatus:', error);
+            } finally {
+                isUpdating = false; // Reset updating flag
+            }
         }
 
+        
         // Initialize
         document.addEventListener('DOMContentLoaded', function () {
             loadReportedStudents();
-            setInterval(updateStatus, 100);
+            setInterval(updateStatus, 200);
         });
     </script>
 </body>
