@@ -2,7 +2,7 @@ import qrcode
 from PIL import Image
 
 # Text to encode in QR code
-data_new = "2018JM013"
+data_new = "2019JF055"
 
 # Generate QR code
 qr_new = qrcode.QRCode(

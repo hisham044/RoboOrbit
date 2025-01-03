@@ -34,12 +34,20 @@ def drive():
 
 @app.route('/update_status/<int:program_id>', methods=['POST'])
 def update_status(program_id):
+    data = request.get_json()  # Parse JSON payload
+    new_status = data.get('status')  # Extract 'status' from the payload
+
+    # Validate that the status was provided
+    if not new_status:
+        return 'Bad Request: Missing status', 400
+
     program = Program.query.get(program_id)
-    if program and program.status == 'pending':
-        program.status = 'reporting'
+
+    if program:
+        program.status = new_status  # Update to the new status
         db.session.commit()
-        return '', 200
-    return 'Not Found', 404
+        return '', 200  # Success response
+    return 'Not Found', 404  # Program not found
 
 
 # Add this new route to app.py

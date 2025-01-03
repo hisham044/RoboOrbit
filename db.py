@@ -14,6 +14,9 @@ class Program(db.Model):
     limit = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(20), nullable=True, default="pending")
     order = db.Column(db.Integer, nullable=True, default=0)
+    duration = db.Column(db.Integer, nullable=False, default=10)  # New column
+    topic = db.Column(db.String(255), nullable=False, default="Sample Topic")  # New column
+
 
 class ProgramList(db.Model):
     __tablename__ = 'programlist'

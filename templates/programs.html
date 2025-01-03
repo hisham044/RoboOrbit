@@ -58,6 +58,10 @@
                     try {
                         const response = await fetch(`/update_status/${programId}`, {
                             method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ status: 'reporting' }), // Sending the "reporting" status
                         });
     
                         if (response.ok) {
@@ -83,7 +87,7 @@
                 }
             }
         });
-    </script>
+    </script>    
     
 </body>
 

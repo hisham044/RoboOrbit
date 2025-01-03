@@ -10,36 +10,49 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
-        ::-webkit-scrollbar {
+        ::-webkit-scrollbar { display: none; }
+        .topic-display {
+            text-align: center;
+            font-size: 1.2rem;
+            margin: 0.25rem 0;
+            padding: 0.5rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
             display: none;
         }
-
+        .countdown {
+            text-align: center;
+            font-size: 1.3rem;
+            margin: 0.5rem 0;
+            font-weight: bold;
+        }
         .container {
             max-height: 100dvh;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            gap: 2rem;
-            padding: 1rem;
+            gap: 0.5rem;
+            padding: 0.5rem;
         }
-
         .container .table-cont {
             display: flex;
             overflow: hidden;
             flex-direction: column;
             flex: 1;
         }
-
         .tbl {
             flex: 1;
             overflow: auto;
             position: relative;
         }
-
         thead {
             position: sticky;
             top: 0;
             background: white;
+        }
+        .participant-timer {
+            font-weight: bold;
+            color: #28a745;
         }
 
 
@@ -144,7 +157,11 @@
     <div class="container">
         <h1 class="text-center" style="text-transform: uppercase; margin-bottom:0; font-weight:bold;">
             {{ program.category }} {{ program.name }}
-        </h1>
+        </h1>        
+        <div class="topic-display" id="topicDisplay">
+            Topic: {{ program.topic }}
+        </div>
+        <div class="countdown" id="countdown"></div>
         <div class="table-cont">
             <h2 class="text-center">Participants</h2>
             <div class="h-full tbl">
@@ -156,6 +173,7 @@
                             <th>Name</th>
                             <th>Code</th>
                             <th>Status</th>
+                            <th>Time Left</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -166,6 +184,7 @@
                             <td>{{ entry.student.name }}</td>
                             <td>{{ entry.code }}</td>
                             <td class="status-cell">not reported</td>
+                            <td class="participant-timer">--</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -198,23 +217,16 @@
         let studentCodes = {};
         let lastSpokenTime = 0;
         const SPEAK_INTERVAL = 5000; // 5 seconds between speaking prompts
+        let countdownInterval;
+        const endTime = new Date(new Date().getTime() + parseInt('{{ program.duration }}') * 60000);
+        let programStarted = false;        
+        
+        const programId = "{{ program.id }}"; // Example from server-side template
+        const programKey = `program_${programId}`;
 
-        function getNextCode() {
-            let code = nextCode;
-            if (nextCode.length === 1 && nextCode === 'Z') {
-                nextCode = 'AA';
-            } else if (nextCode.length === 1) {
-                nextCode = String.fromCharCode(nextCode.charCodeAt(0) + 1);
-            } else {
-                let lastChar = nextCode.charAt(nextCode.length - 1);
-                if (lastChar === 'Z') {
-                    nextCode = nextCode.slice(0, -1) + 'A' + 'A';
-                } else {
-                    nextCode = nextCode.slice(0, -1) + String.fromCharCode(lastChar.charCodeAt(0) + 1);
-                }
-            }
-            return code;
-        }
+        // Load data for this program
+        let programData = getProgramData();
+        const programDuration = parseInt('{{ program.duration }}');
 
         async function speakText(text) {
             try {
@@ -234,11 +246,50 @@
             await speakText(`Note your code letter is ${code}.`);
         }
 
+        function getProgramData() {
+            const savedData = localStorage.getItem(programKey) || '{}';
+            const data = JSON.parse(savedData);
+            return {
+                reportedStudents: new Set(data.reportedStudents || []),
+                studentCodes: data.studentCodes || {},
+                nextCode: data.nextCode || 'A',
+                startTime: data.startTime,
+                reportTimes: data.reportTimes || {},
+            };
+        }
+
+        function saveProgramData(data) {
+            localStorage.setItem(programKey, JSON.stringify({
+                reportedStudents: [...data.reportedStudents],
+                studentCodes: data.studentCodes,
+                nextCode: data.nextCode,
+                startTime: data.startTime,
+                reportTimes: data.reportTimes
+            }));
+        }
+
+        function getNextCode() {
+            let code = programData.nextCode;
+            if (code.length === 1 && code === 'Z') {
+                programData.nextCode = 'AA';
+            } else if (code.length === 1) {
+                programData.nextCode = String.fromCharCode(code.charCodeAt(0) + 1);
+            } else {
+                let lastChar = code.slice(-1);
+                if (lastChar === 'Z') {
+                    programData.nextCode = code.slice(0, -1) + 'A' + 'A';
+                } else {
+                    programData.nextCode = code.slice(0, -1) + String.fromCharCode(lastChar.charCodeAt(0) + 1);
+                }
+            }
+            saveProgramData(programData);
+            return code;
+        }
 
         // Update student status        
         async function updateStudentStatus(jamiaId) {
             const row = document.querySelector(`tr[data-jamia-id="${jamiaId}"]`);
-            if (row && !reportedStudents.has(jamiaId)) {
+            if (row && !programData.reportedStudents.has(jamiaId)) {
                 const statusCell = row.querySelector('.status-cell');
                 const codeCell = row.querySelector('td:nth-child(4)');
                 const code = getNextCode();
@@ -246,14 +297,14 @@
                 statusCell.textContent = 'reported';
                 codeCell.textContent = code;
                 row.classList.add('reported');
-                reportedStudents.add(jamiaId);
-                studentCodes[jamiaId] = code;
+                
+                const reportTime = Date.now();
+                programData.reportedStudents.add(jamiaId);
+                programData.studentCodes[jamiaId] = code;
+                programData.reportTimes[jamiaId] = reportTime;
 
-                // Save to localStorage
-                localStorage.setItem('reportedStudents', JSON.stringify([...reportedStudents]));
-                localStorage.setItem('studentCodes', JSON.stringify(studentCodes));
-                localStorage.setItem('nextCode', nextCode);
-
+                saveProgramData(programData);
+                
                 // Show notification with improved layout
                 const notification = document.getElementById('scanNotification');
                 notification.querySelector('.scan-code-label').textContent = "Code:";
@@ -269,28 +320,47 @@
             }
         }
 
+        function updateTimers() {
+            const now = Date.now();
+            let allTimersFinished = true;
+
+            document.querySelectorAll('tr[data-jamia-id]').forEach(row => {
+                const jamiaId = row.dataset.jamiaId;
+                const timerCell = row.querySelector('.participant-timer');
+                
+                if (programData.reportedStudents.has(jamiaId)) {
+                    const startTimeForStudent = programData.reportTimes[jamiaId] < programData.startTime 
+                        ? programData.startTime 
+                        : programData.reportTimes[jamiaId];
+                    
+                    const timeLeft = startTimeForStudent + (programDuration * 60000) - now;
+                    
+                    if (timeLeft > 0) {
+                        allTimersFinished = false;
+                        const minutes = Math.floor(timeLeft / (1000 * 60));
+                        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                        timerCell.textContent = `${minutes}m ${seconds}s`;
+                    } else {
+                        timerCell.textContent = 'Time Up';
+                    }
+                }
+            });
+
+            return allTimersFinished;
+        }
+        
         
         function loadReportedStudents() {
-            const savedStudents = localStorage.getItem('reportedStudents');
-            const savedCodes = localStorage.getItem('studentCodes');
-            const savedNextCode = localStorage.getItem('nextCode');
-
-            if (savedStudents && savedCodes && savedNextCode) {
-                reportedStudents = new Set(JSON.parse(savedStudents));
-                studentCodes = JSON.parse(savedCodes);
-                nextCode = savedNextCode;
-
-                reportedStudents.forEach(id => {
-                    const row = document.querySelector(`tr[data-jamia-id="${id}"]`);
-                    if (row) {
-                        const statusCell = row.querySelector('.status-cell');
-                        const codeCell = row.querySelector('td:nth-child(4)');
-                        statusCell.textContent = 'reported';
-                        codeCell.textContent = studentCodes[id];
-                        row.classList.add('reported');
-                    }
-                });
-            }
+            programData.reportedStudents.forEach(id => {
+                const row = document.querySelector(`tr[data-jamia-id="${id}"]`);
+                if (row) {
+                    const statusCell = row.querySelector('.status-cell');
+                    const codeCell = row.querySelector('td:nth-child(4)');
+                    statusCell.textContent = 'reported';
+                    codeCell.textContent = programData.studentCodes[id];
+                    row.classList.add('reported');
+                }
+            });
         }
 
         // QR Scanner functionality
@@ -344,10 +414,88 @@
         }
 
         
+        async function updateProgramStatus(status) {
+            try {
+                const response = await fetch(`/update_status/{{ program.id }}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to update status');
+                }
+            } catch (error) {
+                console.error('Error updating status:', error);
+            }
+        }
+
+        function startCountdown() {
+            countdownInterval = setInterval(async () => {
+                const now = new Date().getTime();
+                const distance = endTime - now;
+
+                if (distance <= 0) {
+                    clearInterval(countdownInterval);
+                    await updateProgramStatus('finished');
+                    window.location.href = '/programs';
+                    return;
+                }
+
+                const minutes = Math.floor(distance / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                document.getElementById('countdown').textContent = 
+                    `Time Remaining: ${minutes}m ${seconds}s`;
+            }, 1000);
+        }
+
+        async function announceProgramTopic() {
+            if (programStarted) return;
+            
+            const topic = `{{ program.topic }}`;
+            const topicDisplay = document.getElementById('topicDisplay');
+            
+            programData.startTime = Date.now();
+            saveProgramData(programData);
+            
+            await speakText(`Program topic is ${topic}`);
+            topicDisplay.style.display = 'block';
+            await updateProgramStatus('ongoing');
+            programStarted = true;
+            startTimers();
+        }
+
+        function startTimers() {
+            setInterval(() => {
+                const allTimersFinished = updateTimers();
+                if (allTimersFinished && programStarted) {
+                    window.location.href = '/programs';
+                }
+            }, 1000);
+        }
+
+        // Add keyboard event listener
+        document.addEventListener('keydown', async (e) => {
+            if (e.key.toLowerCase() === 't' && !programStarted) {
+                await announceProgramTopic();
+            }
+            if (e.key.toLowerCase() === 'f' && programStarted) {
+                await updateProgramStatus('finished');
+                window.location.href = '/programs';
+            }
+        });
+        
         // Initialize
         document.addEventListener('DOMContentLoaded', function () {
             loadReportedStudents();
             setInterval(updateStatus, 200);
+            if (programData.startTime) {
+                programStarted = true;
+                document.getElementById('topicDisplay').style.display = 'block';
+                startTimers();
+            }
         });
     </script>
 </body>
